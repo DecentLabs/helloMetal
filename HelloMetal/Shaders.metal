@@ -1,13 +1,23 @@
 #include <metal_stdlib>
 using namespace metal;
 
+typedef unsigned int uint;
+typedef int DataType;
 
-vertex float4 basic_vertex(
-  const device packed_float3* vertex_array [[ buffer(0) ]],
-  unsigned int vid [[ vertex_id ]]) {
-  return float4(vertex_array[vid], 1.0);
-}
+kernel void parsum(const device DataType* data [[ buffer(0) ]],
+                   const device uint& dataLength [[ buffer(1) ]],
+                   device DataType* sums [[ buffer(2) ]],
+                   const device uint& elementsPerSum [[ buffer(3) ]],
 
-fragment half4 basic_fragment() {
-  return half4(1.0);
+                   const uint tgPos [[ threadgroup_position_in_grid ]],
+                   const uint tPerTg [[ threads_per_threadgroup ]],
+                   const uint tPos [[ thread_position_in_threadgroup ]]) {
+
+    uint resultIndex = tgPos * tPerTg + tPos;
+
+    uint dataIndex = resultIndex * elementsPerSum; // Where the summation should begin
+    uint endIndex = dataIndex + elementsPerSum < dataLength ? dataIndex + elementsPerSum : dataLength; // The index where summation should end
+
+    for (; dataIndex < endIndex; dataIndex++)
+        sums[resultIndex] += data[dataIndex];
 }
